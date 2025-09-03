@@ -1,2 +1,8 @@
 # openalex
-Fouille des données bibliographiques
+
+## Installation
+
+```bash
+nvm install
+nvm use
+```
