@@ -23,9 +23,12 @@
     "url": "https://github.com/univ-lehavre/openalex/issues"
   },
   "devDependencies": {
+    "@effect/experimental": "^0.54.6",
+    "@effect/platform-node": "^0.96.1",
     "@eslint/js": "^9.34.0",
     "@tsconfig/node22": "^22.0.2",
     "@types/node": "^24.3.0",
+    "effect": "^3.17.13",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "3.6.2",
