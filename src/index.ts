@@ -1,45 +1,39 @@
-import { DevTools } from '@effect/experimental';
-import { NodeRuntime, NodeSocket } from '@effect/platform-node';
-import { Config, Effect, Layer } from 'effect';
+import { Effect } from 'effect';
+import { chain } from 'lodash';
 
-const openalex_api_base = 'https://api.openalex.org';
-const people_search_api = `${openalex_api_base}/authors`;
-
-const getEnvironmentVariable = Effect.gen(function* () {
-  const mail = yield* Config.string('MAIL');
-  return { mail };
-});
-
-const fetchAuthorsJson = (
-  api_url: string,
-  search: string,
-  mail: string,
-  page: number = 1
-) =>
-  Effect.tryPromise({
-    try: async () => {
-      const params = new URLSearchParams({
-        search,
-        mailto: mail,
-        page: String(page),
-      });
-      const query = params.toString();
-      const res = await fetch(`${api_url}?${query}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-      return res.json();
-    },
-    catch: (reason: unknown) =>
-      reason instanceof Error ? reason : new Error(String(reason)),
-  });
+import { getArguments } from './config';
+import { getAuthors } from './fetch';
+import { DevToolsLive, LogLevelLive, NodeRuntime } from './effect';
 
 const program = Effect.gen(function* () {
-  const { mail } = yield* getEnvironmentVariable;
-  const authors = yield* fetchAuthorsJson(people_search_api, 'Einstein', mail);
-  console.log(JSON.stringify(authors, null, 2));
+  const { name } = getArguments();
+  const authors = yield* getAuthors(name);
+  const display_name = chain(authors.results)
+    .map('display_name')
+    .uniq()
+    .sort()
+    .value();
+  yield* Effect.log(display_name);
+  const display_name_alternatives = chain(authors.results)
+    .map('display_name_alternatives')
+    .flatMap()
+    .uniq()
+    .sort()
+    .value();
+  yield* Effect.log(display_name_alternatives);
+  const affiliation_display_names = chain(authors.results)
+    .map('affiliations')
+    .flatMap()
+    .map('institution')
+    .map('display_name')
+    .uniq()
+    .sort()
+    .value();
+  yield* Effect.log(affiliation_display_names);
 });
 
-const DevToolsLive = DevTools.layerWebSocket().pipe(
-  Layer.provide(NodeSocket.layerWebSocketConstructor)
+program.pipe(
+  Effect.provide(DevToolsLive),
+  Effect.provide(LogLevelLive),
+  NodeRuntime.runMain
 );
-
-program.pipe(Effect.provide(DevToolsLive), NodeRuntime.runMain);

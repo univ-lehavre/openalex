@@ -1,0 +1,1 @@
+export { getAuthors } from './authors';
