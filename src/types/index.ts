@@ -12,7 +12,10 @@ type QueryValue =
 
 type Query = Record<string, QueryValue>;
 
-interface Arguments {
+interface Env {
+  mail: string;
+}
+interface Args {
   name?: string;
 }
 
@@ -21,5 +24,6 @@ export {
   OpenalexSearchAuthorsResponse,
   QueryValue,
   Query,
-  Arguments,
+  Args,
+  Env,
 };

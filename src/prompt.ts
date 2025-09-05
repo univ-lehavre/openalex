@@ -2,21 +2,22 @@ import { intro, text, group, cancel, outro } from '@clack/prompts';
 import process from 'node:process';
 import { Effect } from 'effect';
 import color from 'picocolors';
+import { PromptError } from './errors';
 
-const prepare = (title: string) => {
+const prepare = (title: string): void => {
   console.clear();
   intro(`${color.bgCyan(color.black(` ${title} `))}`);
 };
 
-const finish = (title: string) =>
+const finish = (title: string): void =>
   outro(`${color.bgGreen(color.black(` ${title} `))}`);
 
-const onCancel = () => {
+const onCancel = (): void => {
   cancel('Opération annulée.');
   process.exit(0);
 };
 
-const who = () =>
+const who = (): Effect.Effect<{ name: string }, PromptError, never> =>
   Effect.tryPromise({
     try: () =>
       group(
@@ -34,7 +35,8 @@ const who = () =>
           onCancel,
         }
       ),
-    catch: error => new Error(`Impossible to set parameters`, { cause: error }),
+    catch: error =>
+      new PromptError(`Impossible to set parameters`, { cause: error }),
   });
 
 export { prepare, finish, who };

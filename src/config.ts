@@ -3,27 +3,30 @@ import { Config, Effect } from 'effect';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { prepare, finish, who } from './prompt';
+import { ConfigError } from 'effect/ConfigError';
+import { CommandLineError, PromptError } from './errors';
+import { Args, Env } from './types';
 
 const openalex_api_base = 'https://api.openalex.org';
 const openalex_authors_api_url = new URL(`${openalex_api_base}/authors`);
 
-const getEnv = () =>
+const getEnv = (): Effect.Effect<Env, ConfigError, never> =>
   Effect.gen(function* () {
     const mail = yield* Config.string('MAIL');
     return { mail };
   });
 
-const cmd = () =>
+const cmd = (): Effect.Effect<Args, CommandLineError, never> =>
   Effect.tryPromise({
     try: async () => {
       const argv = await yargs(hideBin(process.argv)).parse();
-      return argv;
+      return { name: argv.name as string | undefined };
     },
     catch: (cause: unknown) =>
-      new Error(`Error while parsing arguments`, { cause }),
+      new CommandLineError(`Error while parsing arguments`, { cause }),
   });
 
-const prompt = () =>
+const prompt = (): Effect.Effect<{ name: string }, PromptError, never> =>
   Effect.gen(function* () {
     prepare('Paramètres requis');
     const { name } = yield* who();
@@ -31,7 +34,11 @@ const prompt = () =>
     return { name };
   });
 
-const getName = () =>
+const parameters = (): Effect.Effect<
+  { name: string },
+  CommandLineError | PromptError,
+  never
+> =>
   Effect.gen(function* () {
     const argv = yield* cmd();
     if (argv.name) {
@@ -42,4 +49,4 @@ const getName = () =>
     }
   });
 
-export { getEnv, getName, openalex_authors_api_url };
+export { getEnv, parameters, openalex_authors_api_url };
