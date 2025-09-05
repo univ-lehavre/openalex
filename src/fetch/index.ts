@@ -1,1 +1,1 @@
-export { getAuthors } from './authors';
+export { searchAuthors } from './authors';
