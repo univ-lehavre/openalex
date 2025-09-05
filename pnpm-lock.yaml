@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@clack/prompts':
+        specifier: ^0.11.0
+        version: 0.11.0
       '@effect/experimental':
         specifier: ^0.54.6
         version: 0.54.6(@effect/platform@0.90.6(effect@3.17.13))(effect@3.17.13)
@@ -20,6 +23,9 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
       qs:
         specifier: ^6.14.0
         version: 6.14.0
@@ -62,6 +68,12 @@ importers:
         version: 8.42.0(eslint@9.34.0)(typescript@5.9.2)
 
 packages:
+
+  '@clack/core@0.5.0':
+    resolution: {integrity: sha512-p3y0FIOwaYRUPRcMO7+dlmLh8PSRcrjuTndsiA0WAFbWES0mLZlrjVoBRZ9DzkPFJZG6KGkJmoEAY0ZcVWTkow==}
+
+  '@clack/prompts@0.11.0':
+    resolution: {integrity: sha512-pMN5FcrEw9hUkZA4f+zLlzivQSeQf5dRGJjSUbvVYDLvpKCdQx5OaknvKzgbtXOizhP+SJJJjqEbOe55uKKfAw==}
 
   '@effect/cluster@0.48.2':
     resolution: {integrity: sha512-ixyr152czBMakiEsXi6zf4F6DSka42LbtoHf7WcFsfLTDwYZieUEVbw4gvIFfAGedfQ0oLY4+uArdJlkJ4gOGA==}
@@ -794,6 +806,9 @@ packages:
     resolution: {integrity: sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==}
     engines: {node: '>=8'}
 
+  picocolors@1.1.1:
+    resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
+
   picomatch@2.3.1:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
@@ -860,6 +875,9 @@ packages:
   side-channel@1.1.0:
     resolution: {integrity: sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==}
     engines: {node: '>= 0.4'}
+
+  sisteransi@1.0.5:
+    resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
   string-width@7.2.0:
     resolution: {integrity: sha512-tsaTIkKW9b4N+AEj+SVA+WhJzV7/zMhcSu78mLKWSk7cXMOSHsBKFWUs0fWwq8QyK3MgJBQRX6Gbi4kYbdvGkQ==}
@@ -959,6 +977,17 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@clack/core@0.5.0':
+    dependencies:
+      picocolors: 1.1.1
+      sisteransi: 1.0.5
+
+  '@clack/prompts@0.11.0':
+    dependencies:
+      '@clack/core': 0.5.0
+      picocolors: 1.1.1
+      sisteransi: 1.0.5
 
   '@effect/cluster@0.48.2(@effect/platform@0.90.6(effect@3.17.13))(@effect/rpc@0.69.2(@effect/platform@0.90.6(effect@3.17.13))(effect@3.17.13))(@effect/sql@0.44.2(@effect/experimental@0.54.6(@effect/platform@0.90.6(effect@3.17.13))(effect@3.17.13))(@effect/platform@0.90.6(effect@3.17.13))(effect@3.17.13))(@effect/workflow@0.9.2(@effect/platform@0.90.6(effect@3.17.13))(@effect/rpc@0.69.2(@effect/platform@0.90.6(effect@3.17.13))(effect@3.17.13))(effect@3.17.13))(effect@3.17.13)':
     dependencies:
@@ -1683,6 +1712,8 @@ snapshots:
 
   path-key@3.1.1: {}
 
+  picocolors@1.1.1: {}
+
   picomatch@2.3.1: {}
 
   prelude-ls@1.2.1: {}
@@ -1742,6 +1773,8 @@ snapshots:
       side-channel-list: 1.0.0
       side-channel-map: 1.0.1
       side-channel-weakmap: 1.0.2
+
+  sisteransi@1.0.5: {}
 
   string-width@7.2.0:
     dependencies:

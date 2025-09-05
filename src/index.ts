@@ -1,12 +1,12 @@
 import { Effect } from 'effect';
 import { chain } from 'lodash';
 
-import { getArguments } from './config';
+import { getName } from './config';
 import { getAuthors } from './fetch';
 import { DevToolsLive, LogLevelLive, NodeRuntime } from './effect';
 
 const program = Effect.gen(function* () {
-  const { name } = getArguments();
+  const { name } = yield* getName();
   const authors = yield* getAuthors(name);
   const display_name = chain(authors.results)
     .map('display_name')

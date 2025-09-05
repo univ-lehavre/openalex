@@ -1,4 +1,3 @@
-import { Args } from './argv';
 import {
   OpenalexSearchAuthorResult,
   OpenalexSearchAuthorsResponse,
@@ -13,10 +12,14 @@ type QueryValue =
 
 type Query = Record<string, QueryValue>;
 
+interface Arguments {
+  name?: string;
+}
+
 export {
   OpenalexSearchAuthorResult,
   OpenalexSearchAuthorsResponse,
-  Args,
   QueryValue,
   Query,
+  Arguments,
 };
