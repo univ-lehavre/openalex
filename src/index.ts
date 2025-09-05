@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import { chain } from 'lodash';
+import { writeFileSync } from 'node:fs';
 
 import { getName } from './config';
 import { getAuthors } from './fetch';
@@ -13,14 +14,12 @@ const program = Effect.gen(function* () {
     .uniq()
     .sort()
     .value();
-  yield* Effect.log(display_name);
   const display_name_alternatives = chain(authors.results)
     .map('display_name_alternatives')
     .flatMap()
     .uniq()
     .sort()
     .value();
-  yield* Effect.log(display_name_alternatives);
   const affiliation_display_names = chain(authors.results)
     .map('affiliations')
     .flatMap()
@@ -29,7 +28,18 @@ const program = Effect.gen(function* () {
     .uniq()
     .sort()
     .value();
-  yield* Effect.log(affiliation_display_names);
+  const results = {
+    meta: authors.meta,
+    results: authors.results,
+    groups: {
+      display_name,
+      display_name_alternatives,
+      affiliation_display_names,
+    },
+  };
+  const filePath = `./${name}-results.json`;
+  writeFileSync(filePath, JSON.stringify(results, null, 2), 'utf8');
+  return results;
 });
 
 program.pipe(
