@@ -10,7 +10,7 @@ interface OpenalexSearchAuthorAffiliationResult {
   years: number[];
 }
 
-interface OpenalexSearchAuthorResult {
+interface AuthorsSearchResult {
   id: string;
   orcid: string;
   display_name: string;
@@ -19,6 +19,33 @@ interface OpenalexSearchAuthorResult {
   works_api_url: string;
   updated_date: string;
   created_date: string;
+}
+
+interface Authorship {
+  author_position: string;
+  author: {
+    id: string;
+    display_name: string;
+    orcid: string;
+  };
+  institutions: {
+    id: string;
+    display_name: string;
+    ror: string;
+    country_code: string;
+    type: string;
+    lineage: string[];
+  }[];
+}
+
+interface WorksResult {
+  id: string;
+  doi: string;
+  title: string;
+  display_name: string;
+  publication_year: number;
+  type: string;
+  authorships: Authorship[];
 }
 
 interface OpenalexResponse<T> {
@@ -30,4 +57,4 @@ interface OpenalexResponse<T> {
   results: T[];
 }
 
-export { OpenalexSearchAuthorResult, OpenalexResponse };
+export { AuthorsSearchResult, OpenalexResponse, WorksResult };
