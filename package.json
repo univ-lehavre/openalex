@@ -5,12 +5,15 @@
   "main": "src/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node ./dist/index.js",
+    "start:only": "node --env-file .env ./dist/index.js",
+    "start": "pnpm run build && pnpm run start:only",
     "types:check": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,js}\" --max-warnings=0",
     "lint:fix": "eslint \"src/**/*.{ts,js}\" --fix",
     "format": "prettier --write \"src/**/*.{ts,js,tsx,jsx,json,md}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,js,tsx,jsx,json,md}\""
+    "format:check": "prettier --check \"src/**/*.{ts,js,tsx,jsx,json,md}\"",
+    "changeset": "npx @changesets/cli",
+    "bump": "npx @changesets/cli version"
   },
   "author": "Pierre-Olivier Chasset",
   "license": "UNLICENSED",
@@ -25,11 +28,24 @@
   "devDependencies": {
     "@eslint/js": "^9.34.0",
     "@tsconfig/node22": "^22.0.2",
+    "@types/lodash": "^4.17.20",
     "@types/node": "^24.3.0",
+    "@types/qs": "^6.14.0",
+    "@types/yargs": "^17.0.33",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "3.6.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.42.0"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@effect/experimental": "^0.54.6",
+    "@effect/platform-node": "^0.96.1",
+    "effect": "^3.17.13",
+    "lodash": "^4.17.21",
+    "picocolors": "^1.1.1",
+    "qs": "^6.14.0",
+    "yargs": "^18.0.0"
   }
 }

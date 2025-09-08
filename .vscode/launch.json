@@ -10,6 +10,8 @@
       "name": "Launch Program",
       "program": "${workspaceFolder}/src/index.ts",
       "preLaunchTask": "tsc: build - tsconfig.json",
+      "runtimeArgs": ["--env-file", ".env"],
+      "args": ["--name", "einstein"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     }
   ]
