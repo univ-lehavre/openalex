@@ -1,4 +1,13 @@
-import { intro, text, group, cancel, outro } from '@clack/prompts';
+import {
+  intro,
+  group,
+  log,
+  cancel,
+  outro,
+  text,
+  multiselect,
+  Option,
+} from '@clack/prompts';
 import process from 'node:process';
 import { Effect } from 'effect';
 import color from 'picocolors';
@@ -39,4 +48,24 @@ const who = (): Effect.Effect<{ name: string }, PromptError, never> =>
       new PromptError(`Impossible to set parameters`, { cause: error }),
   });
 
-export { prepare, finish, who };
+const multiple = (message: string, options: Option<string>[]) =>
+  Effect.tryPromise({
+    try: () =>
+      group(
+        {
+          selection: () =>
+            multiselect({
+              message,
+              options,
+              required: true,
+            }),
+        },
+        {
+          onCancel,
+        }
+      ),
+    catch: error =>
+      new PromptError(`Impossible to set parameters`, { cause: error }),
+  });
+
+export { prepare, finish, who, multiple, log };

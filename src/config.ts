@@ -2,7 +2,7 @@ import process from 'node:process';
 import { Config, Effect } from 'effect';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { prepare, finish, who } from './prompt';
+import { prepare, who } from './prompt';
 import { ConfigError } from 'effect/ConfigError';
 import { CommandLineError, PromptError } from './errors';
 import { Args, Env } from './types';
@@ -28,9 +28,8 @@ const cmd = (): Effect.Effect<Args, CommandLineError, never> =>
 
 const prompt = (): Effect.Effect<{ name: string }, PromptError, never> =>
   Effect.gen(function* () {
-    prepare('Paramètres requis');
+    prepare('OpenAlex');
     const { name } = yield* who();
-    finish('C’est parti !');
     return { name };
   });
 
