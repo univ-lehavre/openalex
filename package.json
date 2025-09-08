@@ -11,7 +11,9 @@
     "lint": "eslint \"src/**/*.{ts,js}\" --max-warnings=0",
     "lint:fix": "eslint \"src/**/*.{ts,js}\" --fix",
     "format": "prettier --write \"src/**/*.{ts,js,tsx,jsx,json,md}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,js,tsx,jsx,json,md}\""
+    "format:check": "prettier --check \"src/**/*.{ts,js,tsx,jsx,json,md}\"",
+    "changeset": "npx @changesets/cli",
+    "bump": "npx @changesets/cli version"
   },
   "author": "Pierre-Olivier Chasset",
   "license": "UNLICENSED",
