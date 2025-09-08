@@ -1,31 +1,33 @@
-interface Affiliation {
+interface OpenalexSearchAuthorAffiliationResult {
   institution: {
     id: string;
+    ror: string;
     display_name: string;
-    country_code: string | null;
-    ror: string | null;
-    wikidata: string | null;
-    type: string | null;
-    lineage: string[] | null;
+    country_code: string;
+    type: string;
+    lineage: string[];
   };
   years: number[];
 }
 
 interface OpenalexSearchAuthorResult {
   id: string;
+  orcid: string;
   display_name: string;
   display_name_alternatives: string[];
-  affiliations: Affiliation[];
+  affiliations: OpenalexSearchAuthorAffiliationResult[];
+  works_api_url: string;
+  updated_date: string;
   created_date: string;
 }
 
-interface OpenalexSearchAuthorsResponse {
+interface OpenalexResponse<T> {
   meta: {
     count: number;
     page: number;
     per_page: number;
   };
-  results: OpenalexSearchAuthorResult[];
+  results: T[];
 }
 
-export { OpenalexSearchAuthorResult, OpenalexSearchAuthorsResponse };
+export { OpenalexSearchAuthorResult, OpenalexResponse };
