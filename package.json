@@ -39,7 +39,7 @@
     "typescript-eslint": "^8.42.0"
   },
   "dependencies": {
-    "@clack/prompts": "^0.11.0",
+    "@clack/prompts": "1.0.0-alpha.4",
     "@effect/experimental": "^0.54.6",
     "@effect/platform-node": "^0.96.1",
     "effect": "^3.17.13",
