@@ -1,14 +1,24 @@
-import { Effect } from 'effect';
+import { Effect, Logger, LogLevel } from 'effect';
 import { chain } from 'lodash';
-import { writeFileSync } from 'node:fs';
 
-import { parameters } from './config';
+import { cmd } from './config';
 import { searchAuthors } from './fetch';
-import { DevToolsLive, LogLevelLive, NodeRuntime } from './effect';
-import { multiple, log, finish } from './prompt';
+import { multiple, log, finish, prepare, who } from './prompt';
+import { retrieve_articles } from './fetch/fetch-openalex-authors';
 
 const program = Effect.gen(function* () {
-  const { name } = yield* parameters();
+  // Saisie du nom du chercheur
+  const argv = yield* cmd();
+  let name: string;
+  if (argv.name) {
+    name = argv.name as string;
+  } else {
+    prepare('OpenAlex');
+    const res = yield* who('Précisez le nom d’un chercheur');
+    name = res.name;
+  }
+
+  // Recherche des auteurs dans l’API OpenAlex
   const search = yield* searchAuthors(name);
   const authors = search.results;
 
@@ -18,59 +28,35 @@ const program = Effect.gen(function* () {
     log.error(`Aucun chercheur trouvé pour « ${name} »`);
     process.exit(1);
   }
-  log.info(
-    `Nous avons trouvé ${authors.length} identifiants OpenAlex pour ce chercheur·euse`
-  );
   const display_name_alternatives = chain(authors)
     .map('display_name_alternatives')
     .flatMap()
     .uniq()
     .sort()
     .value();
-  const { selection } =
+  const selected_display_name_alternatives =
     display_name_alternatives.length === 1
       ? { selection: [display_name_alternatives[0]] }
       : yield* multiple(
-          `Parmi les ${display_name_alternatives.length} formes imprimées suivantes, veuillez sélectionner celles qui correspondent le mieux à ce chercheur·euse (« ${name} ») :`,
-          display_name_alternatives.map(name => ({ value: name, label: name }))
+          `Parmi les ${display_name_alternatives.length} formes imprimées suivantes, veuillez sélectionner celles qui correspondent le mieux à « ${name} »`,
+          display_name_alternatives.map(name => ({ value: name, label: name })),
         );
+
+  log.info(
+    `${selected_display_name_alternatives.selection.length} formes imprimées sélectionnées :\n${selected_display_name_alternatives.selection.map(name => `- ${name}`).join('\n')}`,
+  );
+
   const selected_authors = authors.filter(
     author =>
-      author.display_name_alternatives.filter(name => selection.includes(name))
-        .length > 0
+      author.display_name_alternatives.filter(name =>
+        selected_display_name_alternatives.selection.includes(name),
+      ).length > 0,
   );
   log.info(
-    `${selected_authors.length} identifiants OpenAlex sont liés à ces formes imprimées :\n${selected_authors.map(author => `- ${author.display_name} (${author.id})`).join('\n')}`
-  );
-  const affiliation_display_names = chain(authors)
-    .map('affiliations')
-    .flatMap()
-    .map('institution')
-    .map('display_name')
-    .uniq()
-    .sort()
-    .value();
-
-  const removed_affiliations = chain(
-    authors.filter(
-      author =>
-        author.display_name_alternatives.filter(name =>
-          selection.includes(name)
-        ).length === 0
-    )
-  )
-    .map('affiliations')
-    .flatMap()
-    .map('institution')
-    .map('display_name')
-    .uniq()
-    .sort()
-    .value();
-
-  log.info(
-    `${removed_affiliations.length} affiliations ont été écartées car elles sont liées à des identifiants OpenAlex non sélectionnés :\n${removed_affiliations.map(name => `- ${name}`).join('\n')}`
+    `${selected_authors.length} identifiants OpenAlex de chercheurs sont liés à ces formes imprimées`,
   );
 
+  // Sélection des affiliations
   const affiliations = chain(selected_authors)
     .map('affiliations')
     .flatMap()
@@ -81,44 +67,44 @@ const program = Effect.gen(function* () {
     .value();
 
   const selected_affiliations = yield* multiple(
-    `Parmi les ${affiliations.length} affiliations suivantes, veuillez sélectionner celles qui correspondent le mieux à ce chercheur·euse (« ${name} ») :`,
-    affiliations.map(name => ({ value: name, label: name }))
+    `Parmi les ${affiliations.length} affiliations suivantes, veuillez sélectionner celles qui correspondent le mieux à « ${name} »`,
+    affiliations.map(name => ({ value: name, label: name })),
+  );
+
+  log.info(
+    `${selected_affiliations.selection.length} affiliations sélectionnées :\n${selected_affiliations.selection
+      .map(name => `- ${name}`)
+      .join('\n')}`,
   );
 
   const final_authors = selected_authors.filter(
     author =>
       author.affiliations.filter(affiliation =>
-        selected_affiliations.selection.includes(
-          affiliation.institution.display_name
-        )
-      ).length > 0
+        selected_affiliations.selection.includes(affiliation.institution.display_name),
+      ).length > 0,
   );
 
   log.info(
     `${final_authors.length} identifiants OpenAlex sont liés à ces affiliations :\n${final_authors
       .map(author => `- ${author.display_name} (${author.id})`)
       .sort()
-      .join('\n')}`
+      .join('\n')}`,
   );
 
-  const results = {
-    meta: search.meta,
-    results: authors,
-    groups: {
-      display_name,
-      display_name_alternatives,
-      affiliation_display_names,
-    },
-  };
-  const filePath = `./${name}-results.json`;
-  writeFileSync(filePath, JSON.stringify(results, null, 2), 'utf8');
-  finish('C’est parti !');
+  // Récupération des publications des auteurs et affiliations sélectionnés
+  const authors_ids = final_authors.map(author => author.id);
+  const institutions_ids = chain(final_authors)
+    .map('affiliations')
+    .flatMap()
+    .map('institution')
+    .map('id')
+    .uniq()
+    .value();
+  const articles = yield* retrieve_articles(authors_ids, institutions_ids);
 
-  return results;
+  log.info(`${articles.meta.count} articles trouvées`);
+
+  finish('Fin');
 });
 
-program.pipe(
-  Effect.provide(DevToolsLive),
-  Effect.provide(LogLevelLive),
-  NodeRuntime.runMain
-);
+Effect.runPromiseExit(program.pipe(Logger.withMinimumLogLevel(LogLevel.None)));
