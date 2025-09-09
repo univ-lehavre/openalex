@@ -15,4 +15,4 @@ interface Args {
   name?: string;
 }
 
-export { AuthorsSearchResult, WorksResult, OpenalexResponse, QueryValue, Query, Args, Env };
+export type { AuthorsSearchResult, WorksResult, OpenalexResponse, QueryValue, Query, Args, Env };

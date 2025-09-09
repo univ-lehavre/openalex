@@ -21,6 +21,15 @@ interface AuthorsSearchResult {
   created_date: string;
 }
 
+interface AuthorshipInstitution {
+  id: string;
+  display_name: string;
+  ror: string;
+  country_code: string;
+  type: string;
+  lineage: string[];
+}
+
 interface Authorship {
   author_position: string;
   author: {
@@ -28,14 +37,9 @@ interface Authorship {
     display_name: string;
     orcid: string;
   };
-  institutions: {
-    id: string;
-    display_name: string;
-    ror: string;
-    country_code: string;
-    type: string;
-    lineage: string[];
-  }[];
+  institutions: AuthorshipInstitution[];
+  raw_author_name: string;
+  raw_affiliation_strings: string[];
 }
 
 interface WorksResult {
@@ -57,4 +61,4 @@ interface OpenalexResponse<T> {
   results: T[];
 }
 
-export { AuthorsSearchResult, OpenalexResponse, WorksResult };
+export type { AuthorsSearchResult, OpenalexResponse, WorksResult };
