@@ -1,10 +1,13 @@
 {
-    "extends": "@tsconfig/node22/tsconfig.json",
-    "compilerOptions": {
-        "outDir": "./dist",
-        "rootDir": "./src",
-        "sourceMap": true
-    },
-    "include": ["src/**/*.ts"],
-    "exclude": ["node_modules"]
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "sourceMap": true,
+    // PouchDB uses require() to load plugins
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }
