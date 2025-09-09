@@ -1,14 +1,3 @@
-/**
- * Regroupe une liste de chaînes par similarité.
- *
- * Algorithme simple :
- * - calcule la similarité normalisée (1 - distanceLevenshtein / maxLen) entre deux chaînes
- * - parcours les chaînes et place chaque élément dans le premier groupe dont la similarité
- *   avec le représentant du groupe est >= threshold, sinon crée un nouveau groupe
- *
- * Note : implémentation volontairement simple et sans dépendances externes.
- */
-
 type Cluster = string[];
 
 type GroupWithScore = {
@@ -64,51 +53,84 @@ function similarity(a: string, b: string): number {
  *
  * Renvoie un tableau de groupes (chaque groupe est une liste de chaînes).
  */
-function groupBySimilarity(
-  strings: string[],
-  threshold = 0.75,
-  options: { keepDuplicates?: boolean; normalize?: NormalizeOptions | false } = {},
-): Cluster[] {
-  if (!Array.isArray(strings)) throw new TypeError('strings must be an array of strings');
-  if (strings.length === 0) return [];
+type CommonOptions = { keepDuplicates?: boolean; normalize?: NormalizeOptions | false };
 
-  const keepDuplicates = Boolean(options.keepDuplicates);
-
-  // Prepare the list to cluster: either keep all occurrences or remove
-  // case-insensitive duplicates while preserving the first occurrence's casing.
-  let uniques: string[];
-  if (keepDuplicates) {
-    uniques = strings.map(s => String(s));
-  } else {
-    const seen = new Map<string, string>();
-    for (const raw of strings) {
-      const s = String(raw);
-      const key = s.toLowerCase();
-      if (!seen.has(key)) seen.set(key, s);
-    }
-    uniques = Array.from(seen.values());
+function prepareItems(strings: string[], keepDuplicates: boolean): string[] {
+  if (keepDuplicates) return strings.map(s => String(s));
+  const seen = new Map<string, string>();
+  for (const raw of strings) {
+    const s = String(raw);
+    const key = s.toLowerCase();
+    if (!seen.has(key)) seen.set(key, s);
   }
+  return Array.from(seen.values());
+}
 
-  const groups: Cluster[] = [];
+/**
+ * Generic grouping function.
+ * - strings: raw input
+ * - threshold: threshold for comparator
+ * - comparator: function returning similarity in [0,1] for two normalized strings
+ * - options.normalize: if not false, normalizeString is applied before comparator
+ *
+ * Returns groups of raw strings.
+ */
+/**
+ * Internal helper: perform grouping on prepared items using indices.
+ * Returns groups as arrays of indices, plus the items and normalized values.
+ */
+function groupByGenericIndices(
+  strings: string[],
+  threshold: number,
+  comparator: (a: string, b: string) => number,
+  options: CommonOptions = {},
+): { groupsIndices: number[][]; items: string[]; norms: string[] } {
+  if (!Array.isArray(strings)) throw new TypeError('strings must be an array of strings');
+  if (strings.length === 0) return { groupsIndices: [], items: [], norms: [] };
 
-  for (const sRaw of uniques) {
-    const s = options.normalize === false ? sRaw : normalizeString(sRaw, options.normalize ?? {});
+  const items = prepareItems(strings, Boolean(options.keepDuplicates));
+
+  // Precompute normalized representations to avoid repeated work.
+  const norms = items.map(it =>
+    options.normalize === false ? it : normalizeString(it, options.normalize ?? {}),
+  );
+
+  const groupsIndices: number[][] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const ai = norms[i];
     let placed = false;
-    for (const group of groups) {
-      // use first element of group as representative
-      const repRaw = group[0];
-      const rep =
-        options.normalize === false ? repRaw : normalizeString(repRaw, options.normalize ?? {});
-      if (similarity(s, rep) >= threshold) {
-        group.push(sRaw);
+    for (const group of groupsIndices) {
+      const repIndex = group[0];
+      const bi = norms[repIndex];
+      if (comparator(ai, bi) >= threshold) {
+        group.push(i);
         placed = true;
         break;
       }
     }
-    if (!placed) groups.push([sRaw]);
+    if (!placed) groupsIndices.push([i]);
   }
 
-  return groups;
+  return { groupsIndices, items, norms };
+}
+
+function groupByGeneric(
+  strings: string[],
+  threshold: number,
+  comparator: (a: string, b: string) => number,
+  options: CommonOptions = {},
+): Cluster[] {
+  const { groupsIndices, items } = groupByGenericIndices(strings, threshold, comparator, options);
+  return groupsIndices.map(indices => indices.map(i => items[i]));
+}
+
+function groupBySimilarity(
+  strings: string[],
+  threshold = 0.75,
+  options: CommonOptions = {},
+): Cluster[] {
+  return groupByGeneric(strings, threshold, similarity, options);
 }
 
 /**
@@ -119,20 +141,20 @@ function groupBySimilarity(
 function groupBySimilarityWithScore(
   strings: string[],
   threshold = 0.75,
-  options: { keepDuplicates?: boolean; normalize?: NormalizeOptions | false } = {},
+  options: CommonOptions = {},
 ): GroupWithScore[] {
-  const groups = groupBySimilarity(strings, threshold, options);
-  return groups.map(group => {
-    const repRaw = group[0];
-    const rep =
-      options.normalize === false ? repRaw : normalizeString(repRaw, options.normalize ?? {});
-    const sum = group.reduce((acc, itRaw) => {
-      const it =
-        options.normalize === false ? itRaw : normalizeString(itRaw, options.normalize ?? {});
-      return acc + similarity(it, rep);
-    }, 0);
-    const score = group.length === 0 ? 0 : sum / group.length;
-    return { items: group, score };
+  const { groupsIndices, items, norms } = groupByGenericIndices(
+    strings,
+    threshold,
+    similarity,
+    options,
+  );
+  return groupsIndices.map(indices => {
+    const repIndex = indices[0];
+    const repNorm = norms[repIndex];
+    const sum = indices.reduce((acc, idx) => acc + similarity(norms[idx], repNorm), 0);
+    const score = indices.length === 0 ? 0 : sum / indices.length;
+    return { items: indices.map(i => items[i]), score };
   });
 }
 
@@ -243,43 +265,11 @@ function groupByNGramSimilarity(
     normalize?: NormalizeOptions | false;
   } = {},
 ): Cluster[] {
-  if (!Array.isArray(strings)) throw new TypeError('strings must be an array of strings');
-  if (strings.length === 0) return [];
-
-  const keepDuplicates = Boolean(options.keepDuplicates);
   const nValues =
     Array.isArray(options.nValues) && options.nValues.length > 0 ? options.nValues : [2, 3];
   const weights = options.weights;
-
-  let items: string[];
-  if (keepDuplicates) items = strings.map(s => String(s));
-  else {
-    const seen = new Map<string, string>();
-    for (const raw of strings) {
-      const s = String(raw);
-      const key = s.toLowerCase();
-      if (!seen.has(key)) seen.set(key, s);
-    }
-    items = Array.from(seen.values());
-  }
-
-  const groups: Cluster[] = [];
-  for (const sRaw of items) {
-    const s = options.normalize === false ? sRaw : normalizeString(sRaw, options.normalize ?? {});
-    let placed = false;
-    for (const group of groups) {
-      const rep = group[0];
-      const repNorm =
-        options.normalize === false ? rep : normalizeString(rep, options.normalize ?? {});
-      if (ngramSimilarity(s, repNorm, nValues, weights) >= threshold) {
-        group.push(sRaw);
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) groups.push([sRaw]);
-  }
-  return groups;
+  const comparator = (a: string, b: string) => ngramSimilarity(a, b, nValues, weights);
+  return groupByGeneric(strings, threshold, comparator, options);
 }
 
 export {

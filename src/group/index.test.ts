@@ -1,4 +1,4 @@
-import { groupBySimilarity, groupBySimilarityWithScore } from './index';
+import { groupBySimilarity, groupBySimilarityWithScore, normalizeString } from './index';
 import { groupByNGramSimilarity } from './index';
 
 describe('groupBySimilarity', () => {
@@ -142,5 +142,73 @@ describe('groupBySimilarity', () => {
     expect(flat).toContain('null');
     expect(flat).toContain('undefined');
     expect(flat).toContain('123');
+  });
+
+  test('normalizeString retire accents et ponctuation et met en minuscule', () => {
+    const s = 'École, café! - Déjà';
+    const norm = normalizeString(s);
+    expect(norm).toBe('ecole cafe - deja');
+  });
+
+  test('groupBySimilarity regroupe avec normalisation (par défaut) et pas sans', () => {
+    const input = ['École', 'ecole', 'Ecole!'];
+    const withNorm = groupBySimilarity(input, 0.9);
+    expect(withNorm.length).toBe(1);
+    const withoutNorm = groupBySimilarity(input, 0.9, { normalize: false });
+    // Without normalization the accented variant won't match the plain form at high threshold
+    expect(withoutNorm.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('groupByNGramSimilarity respecte la normalisation', () => {
+    const input = ['café', 'cafe', 'caff'];
+    const withNorm = groupByNGramSimilarity(input, 0.4, { nValues: [2, 3] });
+    // café and cafe should be grouped when normalization is active
+    const hasCafeGroup = withNorm.some(g => g.includes('café') && g.includes('cafe'));
+    expect(hasCafeGroup).toBe(true);
+    groupByNGramSimilarity(input, 0.4, { nValues: [2, 3], normalize: false });
+    // without normalization they may or may not be grouped depending on threshold/ngrams
+    // we only assert that normalization helps grouping
+  });
+
+  test("scenario complexe n-gram : regroupe variantes d'une même entité et conserve doublons", () => {
+    const input = [
+      'Université de Paris',
+      'Universite de Paris',
+      'Universitty de Paris',
+      'Paris Université',
+      'University of Paris',
+      'Univ. de Paris',
+      'Université de Paris', // duplicate
+      'Lyon Université',
+      'Lyon',
+      'Lyonnaise',
+    ];
+
+    // grouping with n-grams and default normalization
+    const groups = groupByNGramSimilarity(input, 0.35, { nValues: [2, 3] });
+    const mainGroup = groups.find(g => g.includes('Université de Paris'));
+    expect(mainGroup).toBeDefined();
+    // Expect most Paris/University variants to be in the same cluster
+    expect((mainGroup || []).length).toBeGreaterThanOrEqual(5);
+
+    // With keepDuplicates the duplicate must be preserved inside the resulting group
+    const groupsWithKeep = groupByNGramSimilarity(input, 0.35, {
+      nValues: [2, 3],
+      keepDuplicates: true,
+    });
+    const mainWithKeep = groupsWithKeep.find(g => g.includes('Université de Paris'));
+    expect(mainWithKeep).toBeDefined();
+    // there are at least two exact duplicates of 'Université de Paris' in input
+    const dupCount = (mainWithKeep || []).filter(s => s === 'Université de Paris').length;
+    expect(dupCount).toBeGreaterThanOrEqual(2);
+
+    // Sanity: there should be a separate group for Lyon-related strings
+    const lyonGroup = groups.find(g => g.some(s => s.toLowerCase().includes('lyon')));
+    expect(lyonGroup).toBeDefined();
+    // Ensure not all Lyon-related items were absorbed by the Paris main group
+    const totalLyonItems = groups.flat().filter(s => s.toLowerCase().includes('lyon')).length;
+    const lyonInMain = (mainGroup || []).filter(s => s.toLowerCase().includes('lyon')).length;
+    expect(totalLyonItems).toBeGreaterThan(0);
+    expect(lyonInMain).toBeLessThan(totalLyonItems);
   });
 });
