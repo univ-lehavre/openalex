@@ -4,7 +4,7 @@ import { chain } from 'lodash';
 import { cmd } from './config';
 import { searchAuthors } from './fetch';
 import { multiple, log, finish, prepare, who } from './prompt';
-import { retrieve_articles } from './fetch/fetch-openalex-authors';
+import { retrieve_articles } from './fetch/fetch-openalex-entities';
 
 const program = Effect.gen(function* () {
   // Saisie du nom du chercheur
@@ -104,7 +104,19 @@ const program = Effect.gen(function* () {
 
   log.info(`${articles.meta.count} articles trouvées`);
 
+  const selected_articles = yield* multiple(
+    `Parmi les ${articles.meta.count} articles trouvées, veuillez sélectionner celles que vous souhaitez conserver`,
+    articles.results
+      .sort((a, b) => b.publication_year - a.publication_year)
+      .map(article => ({
+        value: article.id,
+        label: `${article.publication_year} - ${article.title}`,
+      })),
+  );
+
   finish('Fin');
+
+  return selected_articles.selection;
 });
 
 Effect.runPromiseExit(program.pipe(Logger.withMinimumLogLevel(LogLevel.None)));

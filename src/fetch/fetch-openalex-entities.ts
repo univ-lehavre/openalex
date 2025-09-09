@@ -54,7 +54,24 @@ const retrieve_articles = (
       params,
       start_page,
     );
-    return response;
+    // Filtrage plus précis combinant les deux critères (au cas où l'API OpenAlex ne le ferait pas correctement)
+    const filtered_results = response.results.filter(
+      work =>
+        work.authorships.filter(
+          authorship =>
+            authors_ids.includes(authorship.author.id) &&
+            authorship.institutions.some(institution => institutions_ids.includes(institution.id)),
+        ).length > 0,
+    );
+    const result: OpenalexResponse<WorksResult> = {
+      meta: {
+        count: filtered_results.length,
+        page: 1,
+        per_page: filtered_results.length,
+      },
+      results: filtered_results,
+    };
+    return result;
   });
 
 export { searchAuthors, retrieve_articles };
