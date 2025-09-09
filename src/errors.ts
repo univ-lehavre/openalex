@@ -4,6 +4,19 @@ interface ErrorOptions {
   cause?: unknown;
 }
 
+// DuckDB
+
+class DuckDBError extends Data.TaggedError('DuckDBError') {
+  constructor(message: string, opts?: ErrorOptions) {
+    super();
+    this.message = message;
+    this.name = 'DuckDBError';
+    if (opts?.cause) this.cause = opts.cause;
+  }
+}
+
+// Classes d’erreurs personnalisées
+
 class FetchError extends Data.TaggedError('FetchError') {
   constructor(message: string, opts?: ErrorOptions) {
     super();
@@ -49,10 +62,4 @@ class ParametersError extends Data.TaggedError('ParametersError') {
   }
 }
 
-export {
-  FetchError,
-  StatusError,
-  CommandLineError,
-  PromptError,
-  ParametersError,
-};
+export { DuckDBError, FetchError, StatusError, CommandLineError, PromptError, ParametersError };
