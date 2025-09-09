@@ -13,37 +13,41 @@ const program = Effect.gen(function* () {
   if (argv.name) {
     name = argv.name as string;
   } else {
-    prepare('OpenAlex');
-    const res = yield* who('Précisez le nom d’un chercheur');
+    console.clear();
+    prepare("Fiabilité des données d'un chercheur dans OpenAlex");
+    const res = yield* who('Saisissez le nom et le prénom d’un chercheur');
     name = res.name;
   }
 
   // Recherche des auteurs dans l’API OpenAlex
+  log.info(`Téléchargeons d’OpenAlex les chercheurs avec le patronyme « ${name} »`);
   const search = yield* searchAuthors(name);
   const authors = search.results;
-
-  // Sélection des identifiants OpenAlex d’auteurs
-  const display_name = chain(authors).map('display_name').uniq().sort().value();
-  if (display_name.length === 0) {
-    log.error(`Aucun chercheur trouvé pour « ${name} »`);
+  if (authors.length === 0) {
+    log.error(`Aucun chercheur trouvé avec le patronyme « ${name} »`);
     process.exit(1);
   }
+
+  // Sélection des identifiants OpenAlex d’auteurs
   const display_name_alternatives = chain(authors)
     .map('display_name_alternatives')
     .flatMap()
     .uniq()
     .sort()
     .value();
+  log.info(
+    `Ces ${authors.length} chercheurs sont cités dans les articles selon ${display_name_alternatives.length} formes imprimées différentes`,
+  );
   const selected_display_name_alternatives =
     display_name_alternatives.length === 1
       ? { selection: [display_name_alternatives[0]] }
       : yield* multiple(
-          `Parmi les ${display_name_alternatives.length} formes imprimées suivantes, veuillez sélectionner celles qui correspondent le mieux à « ${name} »`,
+          `Sélectionnez celles appropriées à ce chercheur :`,
           display_name_alternatives.map(name => ({ value: name, label: name })),
         );
 
   log.info(
-    `${selected_display_name_alternatives.selection.length} formes imprimées sélectionnées :\n${selected_display_name_alternatives.selection.map(name => `- ${name}`).join('\n')}`,
+    `Vous avez sélectionné ${selected_display_name_alternatives.selection.length} formes imprimées :\n${selected_display_name_alternatives.selection.map(name => `- ${name}`).join('\n')}`,
   );
 
   const selected_authors = authors.filter(
@@ -53,7 +57,10 @@ const program = Effect.gen(function* () {
       ).length > 0,
   );
   log.info(
-    `${selected_authors.length} identifiants OpenAlex de chercheurs sont liés à ces formes imprimées`,
+    `Parmi les ${authors.length} chercheurs téléchargés, seuls ${selected_authors.length} d’entre eux sont cités en utilisant ces formes imprimées :\n${selected_authors
+      .map(author => `- ${author.display_name} (${author.id})`)
+      .sort()
+      .join('\n')}`,
   );
 
   // Sélection des affiliations
@@ -66,26 +73,43 @@ const program = Effect.gen(function* () {
     .sort()
     .value();
 
+  log.info(
+    `Ces ${selected_authors.length} chercheurs sont affiliés à ${affiliations.length} institutions différentes`,
+  );
   const selected_affiliations = yield* multiple(
-    `Parmi les ${affiliations.length} affiliations suivantes, veuillez sélectionner celles qui correspondent le mieux à « ${name} »`,
+    `Sélectionnez celles appropriées à ce chercheur :`,
     affiliations.map(name => ({ value: name, label: name })),
   );
-
+  const final_affiliations = Array.from(
+    new Map(
+      selected_authors
+        .flatMap(author =>
+          author.affiliations.filter(affiliation =>
+            selected_affiliations.selection.includes(affiliation.institution.display_name),
+          ),
+        )
+        .map(affiliation => [affiliation.institution.id, affiliation] as const),
+    ).values(),
+  );
   log.info(
-    `${selected_affiliations.selection.length} affiliations sélectionnées :\n${selected_affiliations.selection
-      .map(name => `- ${name}`)
+    `Vous avez sélectionné ${final_affiliations.length} affiliations :\n${final_affiliations
+      .map(
+        affiliation => `- ${affiliation.institution.display_name} (${affiliation.institution.id})`,
+      )
       .join('\n')}`,
   );
 
   const final_authors = selected_authors.filter(
     author =>
       author.affiliations.filter(affiliation =>
-        selected_affiliations.selection.includes(affiliation.institution.display_name),
+        final_affiliations
+          .map(affiliation => affiliation.institution.display_name)
+          .includes(affiliation.institution.display_name),
       ).length > 0,
   );
 
   log.info(
-    `${final_authors.length} identifiants OpenAlex sont liés à ces affiliations :\n${final_authors
+    `Au final, ${final_authors.length} chercheurs sont liés à ces formes imprimées et ces affiliations :\n${final_authors
       .map(author => `- ${author.display_name} (${author.id})`)
       .sort()
       .join('\n')}`,
@@ -93,30 +117,82 @@ const program = Effect.gen(function* () {
 
   // Récupération des publications des auteurs et affiliations sélectionnés
   const authors_ids = final_authors.map(author => author.id);
-  const institutions_ids = chain(final_authors)
-    .map('affiliations')
-    .flatMap()
-    .map('institution')
-    .map('id')
-    .uniq()
-    .value();
+  const institutions_ids = final_affiliations.map(affiliation => affiliation.institution.id);
+  log.info(
+    `Téléchargeons les articles liés à ces ${authors_ids.length} chercheurs et ces ${institutions_ids.length} affiliations`,
+  );
   const articles = yield* retrieve_articles(authors_ids, institutions_ids);
 
-  log.info(`${articles.meta.count} articles trouvées`);
-
-  const selected_articles = yield* multiple(
-    `Parmi les ${articles.meta.count} articles trouvées, veuillez sélectionner celles que vous souhaitez conserver`,
-    articles.results
-      .sort((a, b) => b.publication_year - a.publication_year)
-      .map(article => ({
-        value: article.id,
-        label: `${article.publication_year} - ${article.title}`,
-      })),
+  const filtered_articles = articles.results.filter(
+    work =>
+      work.authorships.filter(
+        authorship =>
+          authors_ids.includes(authorship.author.id) &&
+          authorship.institutions.every(institution => institutions_ids.includes(institution.id)),
+      ).length > 0,
   );
 
-  finish('Fin');
+  log.info(
+    `OpenAlex ne permet pas de filtrer précisément les articles.\n${filtered_articles.length} articles correspondent précisément aux critères sélectionnés.`,
+  );
 
-  return selected_articles.selection;
+  const raw_author_name = Array.from(
+    new Map(
+      filtered_articles
+        .map(work => work.authorships)
+        .flat()
+        .filter(autorship => authors_ids.includes(autorship.author.id))
+        .map(autorship => [autorship.raw_author_name, autorship.raw_author_name]),
+    ).values(),
+  ).sort((a, b) => a.localeCompare(b));
+  log.info(
+    `Ces articles citent ${raw_author_name.length} formes imprimées différentes pour le nom de l’auteur :\n${raw_author_name
+      .map(name => `- ${name}`)
+      .join('\n')}`,
+  );
+
+  const raw_affiliations_string = Array.from(
+    new Map(
+      filtered_articles
+        .map(work => work.authorships)
+        .flat()
+        .filter(autorship => authors_ids.includes(autorship.author.id))
+        .map(autorship => autorship.raw_affiliation_strings)
+        .flat()
+        .map(name => [name, name]),
+    ).values(),
+  ).sort((a, b) => a.localeCompare(b));
+  log.info(
+    `Ces articles citent ${raw_affiliations_string.length} formes imprimées différentes pour les affiliations :\n${raw_affiliations_string
+      .map(name => `- ${name}`)
+      .join('\n')}`,
+  );
+
+  // const raw_affiliations_string = chain(filtered_articles)
+  //   .map('authorships')
+  //   .flatMap()
+  //   .map('raw_affiliation_strings')
+  //   .flatMap()
+  //   .uniq()
+  //   .sort()
+  //   .value();
+  // log.info(
+  //   `Ces articles citent ${raw_affiliations_string.length} formes imprimées différentes pour les affiliations :\n${raw_affiliations_string
+  //     .map(name => `- ${name}`)
+  //     .join('\n')}`,
+  // );
+
+  // const selected_articles = yield* multiple(
+  //   `Sélectionnez les articles correspondant à « ${name} » :`,
+  //   filtered_articles
+  //     .sort((a, b) => b.publication_year - a.publication_year)
+  //     .map(article => ({
+  //       value: article.id,
+  //       label: `${article.publication_year} - ${article.title} | ${article.id}`,
+  //     })),
+  // );
+
+  finish('Fin');
 });
 
 Effect.runPromiseExit(program.pipe(Logger.withMinimumLogLevel(LogLevel.None)));

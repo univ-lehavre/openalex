@@ -31,6 +31,7 @@ const searchAuthors = (
     const response: OpenalexResponse<AuthorsSearchResult> = yield* fetchAPI<AuthorsSearchResult>(
       url,
       params,
+      'chercheurs',
       start_page,
     );
     return response;
@@ -52,26 +53,10 @@ const retrieve_articles = (
     const response: OpenalexResponse<WorksResult> = yield* fetchAPI<WorksResult>(
       url,
       params,
+      'articles',
       start_page,
     );
-    // Filtrage plus précis combinant les deux critères (au cas où l'API OpenAlex ne le ferait pas correctement)
-    const filtered_results = response.results.filter(
-      work =>
-        work.authorships.filter(
-          authorship =>
-            authors_ids.includes(authorship.author.id) &&
-            authorship.institutions.some(institution => institutions_ids.includes(institution.id)),
-        ).length > 0,
-    );
-    const result: OpenalexResponse<WorksResult> = {
-      meta: {
-        count: filtered_results.length,
-        page: 1,
-        per_page: filtered_results.length,
-      },
-      results: filtered_results,
-    };
-    return result;
+    return response;
   });
 
 export { searchAuthors, retrieve_articles };

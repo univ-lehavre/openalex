@@ -14,10 +14,7 @@ import { Effect } from 'effect';
 import color from 'picocolors';
 import { PromptError } from './errors';
 
-const prepare = (title: string): void => {
-  console.clear();
-  intro(`${color.bgCyan(color.black(` ${title} `))}`);
-};
+const prepare = (title: string): void => intro(`${color.bgCyan(color.black(` ${title} `))}`);
 
 const finish = (title: string): void => outro(`${color.bgGreen(color.black(` ${title} `))}`);
 
@@ -42,7 +39,7 @@ const who = (message: string): Effect.Effect<{ name: string }, PromptError, neve
         },
         {
           onCancel,
-        }
+        },
       ),
     catch: error => new PromptError(`Impossible to set parameters`, { cause: error }),
   });
@@ -63,7 +60,7 @@ const multiple = (message: string, options: Option<string>[]) =>
         },
         {
           onCancel,
-        }
+        },
       ),
     catch: error => new PromptError(`Impossible to set parameters`, { cause: error }),
   });
