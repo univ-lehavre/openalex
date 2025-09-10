@@ -60,57 +60,6 @@ describe('groupBySimilarity', () => {
     expect(groups[0].length).toBe(3);
   });
 
-  test('groupBySimilarityWithScore retourne des scores valides', () => {
-    const input = ['Paris', 'Pariss', 'Lyon'];
-    const withScores = groupBySimilarityWithScore(input, 0.7);
-    // types : GroupWithScore[] -> each entry has items and score
-    expect(Array.isArray(withScores)).toBe(true);
-    for (const g of withScores) {
-      expect(Array.isArray(g.items)).toBe(true);
-      expect(typeof g.score).toBe('number');
-      expect(g.score).toBeGreaterThanOrEqual(0);
-      expect(g.score).toBeLessThanOrEqual(1);
-    }
-    // group of identical/similar Paris variants should have score > 0.7
-    const parisGroup = withScores.find(g => g.items.some((it: string) => it === 'Paris'));
-    expect(parisGroup).toBeDefined();
-    expect(parisGroup?.score).toBeGreaterThan(0.7);
-  });
-
-  test('groupBySimilarityWithScore respecte keepDuplicates', () => {
-    const input = ['a', 'a', 'A'];
-    const withKeep = groupBySimilarityWithScore(input, 0.9, { keepDuplicates: true });
-    const withoutKeep = groupBySimilarityWithScore(input, 0.9, { keepDuplicates: false });
-    expect(withKeep[0].items.length).toBe(3);
-    expect(withoutKeep[0].items.length).toBe(1);
-  });
-
-  test('groupByNGramSimilarity regroupe avec bi-gram/tri-gram', () => {
-    const input = ['paris', 'pariss', 'lyon'];
-    const groups = groupByNGramSimilarity(input, 0.4, { nValues: [2, 3] });
-    // Expect paris variants to be grouped
-    const hasParisGroup = groups.some(g => g.includes('paris') && g.includes('pariss'));
-    expect(hasParisGroup).toBe(true);
-  });
-
-  test('groupByNGramSimilarity respecte keepDuplicates', () => {
-    const input = ['a', 'a', 'A'];
-    const withKeep = groupByNGramSimilarity(input, 0.5, { keepDuplicates: true });
-    const withoutKeep = groupByNGramSimilarity(input, 0.5, { keepDuplicates: false });
-    expect(withKeep[0].length).toBe(3);
-    expect(withoutKeep[0].length).toBe(1);
-  });
-
-  test('ngramSimilarity weights influence le score (sanity check)', () => {
-    const a = 'paris';
-    const b = 'pariss';
-    const low = groupByNGramSimilarity([a, b], 0.99, { nValues: [2], weights: [1] });
-    const mixed = groupByNGramSimilarity([a, b], 0.1, { nValues: [2, 3], weights: [0, 1] });
-    // both groupings are just sanity-checked for not throwing and producing arrays
-    expect(Array.isArray(low)).toBe(true);
-    expect(Array.isArray(mixed)).toBe(true);
-  });
-
   test("lève une TypeError si le paramètre n'est pas un tableau", () => {
     // cast to any to test runtime behavior for invalid inputs
     // Allow calling with invalid runtime values for test purposes
@@ -123,10 +72,6 @@ describe('groupBySimilarity', () => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore: intentionally passing invalid runtime value
     expect(() => groupBySimilarity({})).toThrow(TypeError);
-    // same for the scored variant
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore: intentionally passing invalid runtime value
-    expect(() => groupBySimilarityWithScore(null)).toThrow(TypeError);
   });
 
   test('gère les éléments non-string dans le tableau en les convertissant en string', () => {
@@ -144,13 +89,7 @@ describe('groupBySimilarity', () => {
     expect(flat).toContain('123');
   });
 
-  test('normalizeString retire accents et ponctuation et met en minuscule', () => {
-    const s = 'École, café! - Déjà';
-    const norm = normalizeString(s);
-    expect(norm).toBe('ecole cafe - deja');
-  });
-
-  test('groupBySimilarity regroupe avec normalisation (par défaut) et pas sans', () => {
+  test('regroupe avec normalisation (par défaut) et pas sans', () => {
     const input = ['École', 'ecole', 'Ecole!'];
     const withNorm = groupBySimilarity(input, 0.9);
     expect(withNorm.length).toBe(1);
@@ -158,8 +97,70 @@ describe('groupBySimilarity', () => {
     // Without normalization the accented variant won't match the plain form at high threshold
     expect(withoutNorm.length).toBeGreaterThanOrEqual(2);
   });
+});
 
-  test('groupByNGramSimilarity respecte la normalisation', () => {
+describe('groupBySimilarityWithScore', () => {
+  test(' retourne des scores valides', () => {
+    const input = ['Paris', 'Pariss', 'Lyon'];
+    const withScores = groupBySimilarityWithScore(input, 0.7);
+    // types : GroupWithScore[] -> each entry has items and score
+    expect(Array.isArray(withScores)).toBe(true);
+    for (const g of withScores) {
+      expect(Array.isArray(g.items)).toBe(true);
+      expect(typeof g.score).toBe('number');
+      expect(g.score).toBeGreaterThanOrEqual(0);
+      expect(g.score).toBeLessThanOrEqual(1);
+    }
+    // group of identical/similar Paris variants should have score > 0.7
+    const parisGroup = withScores.find(g => g.items.some((it: string) => it === 'Paris'));
+    expect(parisGroup).toBeDefined();
+    expect(parisGroup?.score).toBeGreaterThan(0.7);
+  });
+
+  test(' respecte keepDuplicates', () => {
+    const input = ['a', 'a', 'A'];
+    const withKeep = groupBySimilarityWithScore(input, 0.9, { keepDuplicates: true });
+    const withoutKeep = groupBySimilarityWithScore(input, 0.9, { keepDuplicates: false });
+    expect(withKeep[0].items.length).toBe(3);
+    expect(withoutKeep[0].items.length).toBe(1);
+  });
+
+  test("lève une TypeError si le paramètre n'est pas un tableau", () => {
+    // same for the scored variant
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore: intentionally passing invalid runtime value
+    expect(() => groupBySimilarityWithScore(null)).toThrow(TypeError);
+  });
+});
+
+describe('groupByNGramSimilarity', () => {
+  test(' regroupe avec bi-gram/tri-gram', () => {
+    const input = ['paris', 'pariss', 'lyon'];
+    const groups = groupByNGramSimilarity(input, 0.4, { nValues: [2, 3] });
+    // Expect paris variants to be grouped
+    const hasParisGroup = groups.some(g => g.includes('paris') && g.includes('pariss'));
+    expect(hasParisGroup).toBe(true);
+  });
+
+  test(' respecte keepDuplicates', () => {
+    const input = ['a', 'a', 'A'];
+    const withKeep = groupByNGramSimilarity(input, 0.5, { keepDuplicates: true });
+    const withoutKeep = groupByNGramSimilarity(input, 0.5, { keepDuplicates: false });
+    expect(withKeep[0].length).toBe(3);
+    expect(withoutKeep[0].length).toBe(1);
+  });
+
+  test('avec le paramètre weights influence le score (sanity check)', () => {
+    const a = 'paris';
+    const b = 'pariss';
+    const low = groupByNGramSimilarity([a, b], 0.99, { nValues: [2], weights: [1] });
+    const mixed = groupByNGramSimilarity([a, b], 0.1, { nValues: [2, 3], weights: [0, 1] });
+    // both groupings are just sanity-checked for not throwing and producing arrays
+    expect(Array.isArray(low)).toBe(true);
+    expect(Array.isArray(mixed)).toBe(true);
+  });
+
+  test('respecte la normalisation', () => {
     const input = ['café', 'cafe', 'caff'];
     const withNorm = groupByNGramSimilarity(input, 0.4, { nValues: [2, 3] });
     // café and cafe should be grouped when normalization is active
@@ -210,5 +211,13 @@ describe('groupBySimilarity', () => {
     const lyonInMain = (mainGroup || []).filter(s => s.toLowerCase().includes('lyon')).length;
     expect(totalLyonItems).toBeGreaterThan(0);
     expect(lyonInMain).toBeLessThan(totalLyonItems);
+  });
+});
+
+describe('normalizeString', () => {
+  test('normalizeString retire accents et ponctuation et met en minuscule', () => {
+    const s = 'École, café! - Déjà';
+    const norm = normalizeString(s);
+    expect(norm).toBe('ecole cafe - deja');
   });
 });

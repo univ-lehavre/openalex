@@ -249,7 +249,7 @@ function normalizeString(input: string, options: NormalizeOptions = {}): string 
   return s;
 }
 
-export { normalizeString };
+export {};
 
 /**
  * Regroupe par similarité basée sur n-grams (Jaccard) — supporte bi-gram et tri-gram.
@@ -276,6 +276,7 @@ export {
   groupBySimilarity,
   groupBySimilarityWithScore,
   groupByNGramSimilarity,
+  normalizeString,
   type Cluster,
   type GroupWithScore,
 };
