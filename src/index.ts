@@ -3,8 +3,9 @@ import { chain } from 'lodash';
 
 import { cmd } from './config';
 import { searchAuthors } from './fetch';
-import { multiple, log, finish, prepare, who } from './prompt';
+import { multiple, log, finish, prepare, who, groupSelect } from './prompt';
 import { retrieve_articles } from './fetch/fetch-openalex-entities';
+import { groupByNGramSimilarity } from './group';
 
 const program = Effect.gen(function* () {
   // Saisie du nom du chercheur
@@ -162,11 +163,26 @@ const program = Effect.gen(function* () {
         .map(name => [name, name]),
     ).values(),
   ).sort((a, b) => a.localeCompare(b));
-  log.info(
-    `Ces articles citent ${raw_affiliations_string.length} formes imprimées différentes pour les affiliations :\n${raw_affiliations_string
-      .map(name => `- ${name}`)
-      .join('\n')}`,
+
+  const groups = groupByNGramSimilarity(raw_affiliations_string, 0.5);
+
+  console.log(JSON.stringify(groups, null, 2));
+
+  const opts: Record<string, { value: string; label?: string }[]> = groups.reduce(
+    (acc, group, index) => {
+      acc[`Groupe ${index + 1}`] = group.map(name => ({ value: name, label: name }));
+      return acc;
+    },
+    {} as Record<string, { value: string; label?: string }[]>,
   );
+
+  // groupSelect expects a Record<string, Option[]> so provide a keyed options object
+  yield* groupSelect({
+    message: 'Sélectionnez les formes appropriées pour les affiliations :',
+    options: opts,
+    selectableGroups: true,
+    groupSpacing: 1,
+  });
 
   // const raw_affiliations_string = chain(filtered_articles)
   //   .map('authorships')

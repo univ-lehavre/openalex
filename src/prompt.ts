@@ -8,6 +8,8 @@ import {
   autocompleteMultiselect,
   progress,
   Option,
+  groupMultiselect,
+  GroupMultiSelectOptions,
 } from '@clack/prompts';
 import process from 'node:process';
 import { Effect } from 'effect';
@@ -65,4 +67,18 @@ const multiple = (message: string, options: Option<string>[]) =>
     catch: error => new PromptError(`Impossible to set parameters`, { cause: error }),
   });
 
-export { prepare, finish, who, multiple, log, progress };
+const groupSelect = (opts: GroupMultiSelectOptions<string>) =>
+  Effect.tryPromise({
+    try: () =>
+      group(
+        {
+          selection: () => groupMultiselect<string>(opts),
+        },
+        {
+          onCancel,
+        },
+      ),
+    catch: error => new PromptError(`Impossible to set parameters`, { cause: error }),
+  });
+
+export { prepare, finish, who, multiple, log, progress, groupSelect };
