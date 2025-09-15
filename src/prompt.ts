@@ -5,6 +5,7 @@ import {
   cancel,
   outro,
   text,
+  select,
   autocompleteMultiselect,
   progress,
   Option,
@@ -46,6 +47,27 @@ const who = (message: string): Effect.Effect<{ name: string }, PromptError, neve
     catch: error => new PromptError(`Impossible to set parameters`, { cause: error }),
   });
 
+const selection = (
+  message: string,
+  options: Option<string>[],
+): Effect.Effect<{ selection: string }, PromptError, never> =>
+  Effect.tryPromise({
+    try: () =>
+      group(
+        {
+          selection: () =>
+            select({
+              message,
+              options,
+            }),
+        },
+        {
+          onCancel,
+        },
+      ),
+    catch: error => new PromptError(`Impossible to set parameters`, { cause: error }),
+  });
+
 const multiple = (message: string, options: Option<string>[]) =>
   Effect.tryPromise({
     try: () =>
@@ -56,7 +78,7 @@ const multiple = (message: string, options: Option<string>[]) =>
               message,
               options,
               placeholder: 'Sélectionnez une ou plusieurs options',
-              maxItems: 20,
+              maxItems: 30,
               required: true,
             }),
         },
@@ -81,4 +103,4 @@ const groupSelect = (opts: GroupMultiSelectOptions<string>) =>
     catch: error => new PromptError(`Impossible to set parameters`, { cause: error }),
   });
 
-export { prepare, finish, who, multiple, log, progress, groupSelect };
+export { prepare, finish, who, multiple, log, progress, groupSelect, selection };

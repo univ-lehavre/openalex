@@ -59,4 +59,25 @@ const retrieve_articles = (
     return response;
   });
 
-export { searchAuthors, retrieve_articles };
+const retrieve_articles_given_work_ids = (
+  works_ids: string[],
+  start_page: number = 1,
+): Effect.Effect<OpenalexResponse<WorksResult>, ConfigError | StatusError | FetchError, never> =>
+  Effect.gen(function* () {
+    const { per_page, openalex_api_url } = yield* getEnv();
+    const url = new URL(`${openalex_api_url}/works`);
+    const filter = `ids.openalex:${works_ids.join('|')}`;
+    const params: Query = {
+      filter,
+      per_page,
+    };
+    const response: OpenalexResponse<WorksResult> = yield* fetchAPI<WorksResult>(
+      url,
+      params,
+      'articles',
+      start_page,
+    );
+    return response;
+  });
+
+export { searchAuthors, retrieve_articles, retrieve_articles_given_work_ids };

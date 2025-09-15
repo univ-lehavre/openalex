@@ -61,4 +61,9 @@ interface OpenalexResponse<T> {
   results: T[];
 }
 
-export type { AuthorsSearchResult, OpenalexResponse, WorksResult };
+export type {
+  AuthorsSearchResult,
+  OpenalexResponse,
+  OpenalexSearchAuthorAffiliationResult,
+  WorksResult,
+};
