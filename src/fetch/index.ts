@@ -1,1 +1,1 @@
-export { searchAuthors } from './fetch-openalex-authors';
+export { searchAuthors } from './fetch-openalex-entities';

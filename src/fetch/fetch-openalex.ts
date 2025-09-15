@@ -5,18 +5,20 @@ import { getEnv } from '../config';
 import { ConfigError } from 'effect/ConfigError';
 import { FetchError, StatusError } from '../errors';
 import { OpenalexResponse, Query } from '../types';
+import { log, spinner, SpinnerResult } from '@clack/prompts';
 
 const fetchAPI = <T>(
   base_url: URL,
   params: Query,
-  update_total_pages: (response: OpenalexResponse<T>) => number,
-  get_results: (response: OpenalexResponse<T>) => T[],
-  start_page: number = 1
+  entity_name: string,
+  start_page: number = 1,
 ): Effect.Effect<OpenalexResponse<T>, ConfigError | StatusError | FetchError, never> =>
   Effect.scoped(
     Effect.gen(function* () {
       const { user_agent, rate_limit } = yield* getEnv();
       const ratelimiter: RateLimiter.RateLimiter = yield* RateLimiter.make(rate_limit);
+      const spin = spinner();
+      spin.start('Fouille des données d’OpenAlex');
       const raw = yield* exhaust<T>(
         ratelimiter,
         start_page,
@@ -24,10 +26,11 @@ const fetchAPI = <T>(
         params,
         user_agent,
         base_url,
-        update_total_pages,
-        get_results
+        spin,
+        entity_name,
       );
       const results = raw.flat();
+      spin.stop(`${results.length} ${entity_name} téléchargés d’OpenAlex`);
       const result: OpenalexResponse<T> = {
         meta: {
           count: results.length,
@@ -36,9 +39,8 @@ const fetchAPI = <T>(
         },
         results: results,
       };
-
       return result;
-    })
+    }),
   );
 
 const exhaust = <T>(
@@ -48,20 +50,33 @@ const exhaust = <T>(
   params: Query,
   user_agent: string,
   base_url: URL,
-  update_total_pages: (response: OpenalexResponse<T>) => number = () => total_pages,
-  get_results: (response: OpenalexResponse<T>) => T[] = response => response.results
+  spin: SpinnerResult,
+  entity_name: string,
+  count: number = 0,
 ): Effect.Effect<T[][], StatusError | FetchError, never> =>
   Effect.loop(start_page, {
-    while: state => state < total_pages,
+    while: state => state <= total_pages,
     step: state => state + 1,
     body: state =>
       Effect.gen(function* () {
         params.page = state;
+        yield* Effect.logInfo(params.page);
         const response = yield* ratelimiter(
-          fetch_one_page<OpenalexResponse<T>>(base_url, params, user_agent)
+          fetch_one_page<OpenalexResponse<T>>(base_url, params, user_agent),
         );
-        total_pages = update_total_pages(response);
-        const result = get_results(response);
+        count += response.results.length;
+        if (count > 10000) {
+          log.error(
+            `Le nombre maximal de 10 000 ${entity_name} a été atteint. Veuillez affiner votre recherche.`,
+          );
+          process.exit(1);
+        }
+
+        total_pages = Math.ceil(response.meta.count / response.meta.per_page);
+        spin.message(
+          `${count}/${response.meta.count} ${entity_name} téléchargés | Page ${state}/${total_pages}`,
+        );
+        const result = response.results;
         return result;
       }),
   });

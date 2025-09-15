@@ -20,7 +20,7 @@ const build_headers = (user_agent: string): Headers => {
 const fetch_one_page = <T>(
   base_url: URL,
   params: Query,
-  user_agent: string
+  user_agent: string,
 ): Effect.Effect<T, StatusError | FetchError, never> =>
   Effect.tryPromise({
     try: async () => {
