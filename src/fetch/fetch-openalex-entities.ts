@@ -4,7 +4,7 @@ import { getEnv } from '../config';
 import { fetchAPI } from './fetch-openalex';
 import { ConfigError } from 'effect/ConfigError';
 import { FetchError, StatusError } from '../errors';
-import { OpenalexResponse, AuthorsSearchResult, Query, WorksResult } from '../types';
+import { AuthorsResult, OpenalexResponse, Query, WorksResult } from '../types';
 
 /**
  * Recherche des auteurs dans l'API OpenAlex par display_name et display_name_alternatives.
@@ -15,12 +15,7 @@ import { OpenalexResponse, AuthorsSearchResult, Query, WorksResult } from '../ty
  */
 const searchAuthors = (
   search: string,
-  start_page: number = 1,
-): Effect.Effect<
-  OpenalexResponse<AuthorsSearchResult>,
-  ConfigError | StatusError | FetchError,
-  never
-> =>
+): Effect.Effect<OpenalexResponse<AuthorsResult>, ConfigError | StatusError | FetchError, never> =>
   Effect.gen(function* () {
     const { per_page, openalex_api_url } = yield* getEnv();
     const url = new URL(`${openalex_api_url}/authors`);
@@ -28,19 +23,13 @@ const searchAuthors = (
       search,
       per_page,
     };
-    const response: OpenalexResponse<AuthorsSearchResult> = yield* fetchAPI<AuthorsSearchResult>(
-      url,
-      params,
-      'chercheurs',
-      start_page,
-    );
+    const response: OpenalexResponse<AuthorsResult> = yield* fetchAPI<AuthorsResult>(url, params);
     return response;
   });
 
 const retrieve_articles = (
   authors_ids: string[],
   institutions_ids: string[],
-  start_page: number = 1,
 ): Effect.Effect<OpenalexResponse<WorksResult>, ConfigError | StatusError | FetchError, never> =>
   Effect.gen(function* () {
     const { per_page, openalex_api_url } = yield* getEnv();
@@ -50,18 +39,12 @@ const retrieve_articles = (
       filter,
       per_page,
     };
-    const response: OpenalexResponse<WorksResult> = yield* fetchAPI<WorksResult>(
-      url,
-      params,
-      'articles',
-      start_page,
-    );
+    const response: OpenalexResponse<WorksResult> = yield* fetchAPI<WorksResult>(url, params);
     return response;
   });
 
 const retrieve_articles_given_work_ids = (
   works_ids: string[],
-  start_page: number = 1,
 ): Effect.Effect<OpenalexResponse<WorksResult>, ConfigError | StatusError | FetchError, never> =>
   Effect.gen(function* () {
     const { per_page, openalex_api_url } = yield* getEnv();
@@ -71,13 +54,50 @@ const retrieve_articles_given_work_ids = (
       filter,
       per_page,
     };
-    const response: OpenalexResponse<WorksResult> = yield* fetchAPI<WorksResult>(
-      url,
-      params,
-      'articles',
-      start_page,
-    );
+    const response: OpenalexResponse<WorksResult> = yield* fetchAPI<WorksResult>(url, params);
     return response;
   });
 
-export { searchAuthors, retrieve_articles, retrieve_articles_given_work_ids };
+const retrieve_authors_from_orcid = (
+  orcid: string,
+): Effect.Effect<OpenalexResponse<AuthorsResult>, ConfigError | StatusError | FetchError, never> =>
+  Effect.gen(function* () {
+    const { per_page, openalex_api_url } = yield* getEnv();
+    const url = new URL(`${openalex_api_url}/authors`);
+    const params: Query = {
+      filter: `orcid:${orcid}`,
+      per_page,
+    };
+    const response: OpenalexResponse<AuthorsResult> = yield* fetchAPI<AuthorsResult>(url, params);
+    return response;
+  });
+
+interface FetchOpenAlexAPIOptions {
+  filter?: string;
+  search?: string;
+}
+
+const fetchOpenAlexAPI = <T>(
+  entity: 'authors' | 'works' | 'institutions',
+  opts: FetchOpenAlexAPIOptions,
+) =>
+  Effect.gen(function* () {
+    const { per_page, openalex_api_url } = yield* getEnv();
+    const url = new URL(`${openalex_api_url}/${entity}`);
+    const { filter, search } = opts;
+    const params: Query = {
+      filter,
+      search,
+      per_page,
+    };
+    const response: OpenalexResponse<T> = yield* fetchAPI<T>(url, params);
+    return response;
+  });
+
+export {
+  searchAuthors,
+  retrieve_articles,
+  retrieve_articles_given_work_ids,
+  retrieve_authors_from_orcid,
+  fetchOpenAlexAPI,
+};

@@ -1,5 +1,5 @@
 import type { RateLimiter } from 'effect';
-import { OpenalexResponse, WorksResult, AuthorsSearchResult } from './openalex';
+export * from './openalex';
 
 type QueryValue = string | number | boolean | Array<string | number | boolean> | undefined;
 
@@ -15,4 +15,4 @@ interface Args {
   name?: string;
 }
 
-export type { AuthorsSearchResult, WorksResult, OpenalexResponse, QueryValue, Query, Args, Env };
+export type { QueryValue, Query, Args, Env };

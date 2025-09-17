@@ -10,7 +10,6 @@ import { log, spinner, SpinnerResult } from '@clack/prompts';
 const fetchAPI = <T>(
   base_url: URL,
   params: Query,
-  entity_name: string,
   start_page: number = 1,
 ): Effect.Effect<OpenalexResponse<T>, ConfigError | StatusError | FetchError, never> =>
   Effect.scoped(
@@ -27,10 +26,9 @@ const fetchAPI = <T>(
         user_agent,
         base_url,
         spin,
-        entity_name,
       );
       const results = raw.flat();
-      spin.stop(`${results.length} ${entity_name} téléchargés d’OpenAlex`);
+      spin.stop(`${results.length} items téléchargés d’OpenAlex`);
       const result: OpenalexResponse<T> = {
         meta: {
           count: results.length,
@@ -51,7 +49,6 @@ const exhaust = <T>(
   user_agent: string,
   base_url: URL,
   spin: SpinnerResult,
-  entity_name: string,
   count: number = 0,
 ): Effect.Effect<T[][], StatusError | FetchError, never> =>
   Effect.loop(start_page, {
@@ -67,14 +64,14 @@ const exhaust = <T>(
         count += response.results.length;
         if (count > 10000) {
           log.error(
-            `Le nombre maximal de 10 000 ${entity_name} a été atteint. Veuillez affiner votre recherche.`,
+            `Le nombre maximal de 10 000 items a été atteint. Veuillez affiner votre recherche.`,
           );
           process.exit(1);
         }
 
         total_pages = Math.ceil(response.meta.count / response.meta.per_page);
         spin.message(
-          `${count}/${response.meta.count} ${entity_name} téléchargés | Page ${state}/${total_pages}`,
+          `${count}/${response.meta.count} items téléchargés | Page ${state}/${total_pages}`,
         );
         const result = response.results;
         return result;

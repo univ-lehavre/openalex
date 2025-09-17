@@ -1,4 +1,4 @@
-interface OpenalexSearchAuthorAffiliationResult {
+interface AffiliationsResult {
   institution: {
     id: string;
     ror: string;
@@ -10,12 +10,12 @@ interface OpenalexSearchAuthorAffiliationResult {
   years: number[];
 }
 
-interface AuthorsSearchResult {
+interface AuthorsResult {
   id: string;
   orcid: string;
   display_name: string;
   display_name_alternatives: string[];
-  affiliations: OpenalexSearchAuthorAffiliationResult[];
+  affiliations: AffiliationsResult[];
   works_api_url: string;
   updated_date: string;
   created_date: string;
@@ -61,9 +61,4 @@ interface OpenalexResponse<T> {
   results: T[];
 }
 
-export type {
-  AuthorsSearchResult,
-  OpenalexResponse,
-  OpenalexSearchAuthorAffiliationResult,
-  WorksResult,
-};
+export type { AuthorsResult, OpenalexResponse, AffiliationsResult, WorksResult };

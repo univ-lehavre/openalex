@@ -3,3 +3,4 @@ dist/
 node_modules/
 *-results.json
 .DS_Store
+state*.json
